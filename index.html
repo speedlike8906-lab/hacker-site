@@ -8,104 +8,56 @@
         body {
             margin: 0;
             padding: 0;
-            background-color: #050505; /* Сразу делаем темную хакерскую атмосферу */
+            background-color: #ffffff;
             height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            font-family: 'Courier New', Courier, monospace;
+            font-family: system-ui, -apple-system, sans-serif;
             overflow: hidden;
-            color: #00ff00;
+            transition: background-color 0.5s ease; 
         }
 
-        /* Экраны */
-        .screen {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 5;
-            text-align: center;
-        }
-
-        /* Экран 1: Ввод пароля */
-        #passwordScreen {
-            background-color: #050505;
-        }
-
-        .lock-title {
-            font-size: 22px;
-            margin-bottom: 20px;
-            letter-spacing: 2px;
-            text-shadow: 0 0 5px #00ff00;
-        }
-
-        .input-box {
-            background: transparent;
-            border: 2px solid #00ff00;
-            color: #00ff00;
-            padding: 10px 15px;
+        /* Стиль стартовой кнопки */
+        .btn-start {
+            padding: 15px 40px;
             font-size: 18px;
-            font-family: inherit;
-            outline: none;
-            border-radius: 5px;
-            text-align: center;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
-            margin-bottom: 15px;
-            width: 250px;
-        }
-
-        .btn-submit {
-            background: #00ff00;
-            color: #000000;
+            font-weight: 600;
+            color: #ffffff;
+            background-color: #000000;
             border: none;
-            padding: 10px 25px;
-            font-size: 16px;
-            font-weight: bold;
-            font-family: inherit;
+            border-radius: 8px;
             cursor: pointer;
-            border-radius: 5px;
-            box-shadow: 0 0 15px rgba(0, 255, 0, 0.4);
-            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: background-color 0.2s, transform 0.1s, opacity 0.3s;
+            z-index: 2; /* Чтобы кнопка была поверх всего изначально */
         }
 
-        .btn-submit:hover {
-            background: #003300;
-            color: #00ff00;
-            box-shadow: 0 0 15px rgba(0, 255, 0, 0.8);
+        .btn-start:hover {
+            background-color: #222222;
         }
 
-        /* Экран 2: Терминал (изначально скрыт) */
-        #terminalScreen {
-            display: none;
-            pointer-events: none; /* Чтобы клики шли сквозь текст */
+        .btn-start:active {
+            transform: scale(0.98);
         }
 
+        /* Стиль хакерского текста */
         .terminal-text {
-            font-size: 20px;
-            line-height: 1.6;
-            white-space: pre-line;
-            text-shadow: 0 0 8px #00ff00;
-            background: rgba(0, 0, 0, 0.7); /* Подложка, чтобы текст читался на фоне Матрицы */
-            padding: 20px;
-            border-radius: 10px;
-        }
-
-        /* Холст для Матрицы */
-        canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
             display: none;
+            font-family: 'Courier New', Courier, monospace; 
+            color: #00ff00; 
+            font-size: 20px;
+            text-align: center;
+            line-height: 1.6;
+            white-space: pre-line; 
+            z-index: 2;
         }
 
-        /* Экран 3: Видео контейнер */
+        body.hacked {
+            background-color: #000000; 
+        }
+
+        /* Контейнер для скрытого видео (на весь экран) */
         .video-container {
             display: none;
             position: fixed;
@@ -114,150 +66,83 @@
             width: 100vw;
             height: 100vh;
             background-color: #000000;
-            z-index: 9999;
+            z-index: 9999; /* Поверх всех элементов сайта */
         }
 
         video {
             width: 100%;
             height: 100%;
-            object-fit: contain;
+            object-fit: contain; /* Видео растянется красиво без искажений */
         }
     </style>
 </head>
 <body>
 
-    <!-- Холст для дождя Матрицы -->
-    <canvas id="matrixCanvas"></canvas>
-
-    <!-- ЭКРАН 1: Форма пароля -->
-    <div class="screen" id="passwordScreen">
-        <div class="lock-title">[SYSTEM LOCKED]<br>ENTER DECRYPTION KEY:</div>
-        <input type="password" id="keyInput" class="input-box" placeholder="••••••••" autocomplete="off">
-        <button class="btn-submit" onclick="checkPassword()">ACCESS SYSTEM</button>
-    </div>
+    <!-- Стартовая кнопка -->
+    <button class="btn-start" id="startBtn" onclick="startHacking()">Начать взлом</button>
     
-    <!-- ЭКРАН 2: Текст загрузки -->
-    <div class="screen" id="terminalScreen">
-        <div class="terminal-text" id="terminalText"></div>
-    </div>
+    <!-- Текст терминала -->
+    <div class="terminal-text" id="terminalText"></div>
 
-    <!-- ЭКРАН 3: Видеоплеер -->
+    <!-- Видеоплеер (скрыт до 100%) -->
     <div class="video-container" id="videoContainer">
         <video id="hackVideo" src="aura.mp4"></video>
     </div>
 
     <script>
-        // Слушаем нажатие Enter в поле ввода
-        document.getElementById('keyInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                checkPassword();
-            }
-        });
-
-        function checkPassword() {
-            const input = document.getElementById('keyInput').value;
-            if (!input.trim()) return; // Если ничего не ввели, игнорируем
-
-            const passScreen = document.getElementById('passwordScreen');
-            const termScreen = document.getElementById('terminalScreen');
+        function startHacking() {
+            const button = document.getElementById('startBtn');
             const terminal = document.getElementById('terminalText');
-
-            // Анимация успешного ввода
-            passScreen.innerHTML = `<div class="lock-title" style="color:#00ff00;">KEY ACCEPTED.<br>BYPASSING SECURITY SYSTEM...</div>`;
+            const videoContainer = document.getElementById('videoContainer');
+            const video = document.getElementById('hackVideo');
             
+            // Исчезновение кнопки
+            button.style.opacity = '0';
             setTimeout(() => {
-                passScreen.style.display = 'none';
-                termScreen.style.display = 'flex';
-                
-                // Включаем Матрицу
-                startMatrix();
+                button.style.display = 'none';
+            }, 300);
 
-                // Запускаем хакерский текст
-                terminal.innerHTML = `[INITIALIZING OVERRIDE PROTOCOL...]\nEstablishing secure proxy tunnel...\nBypassing mainframe firewall [SUCCESS]\n`;
+            // Включаем черный фон
+            document.body.classList.add('hacked');
+
+            // Появление хакерского текста через 0.5 сек
+            setTimeout(() => {
+                terminal.style.display = 'block';
                 
+                const baseText = `[INITIALIZING OVERRIDE PROTOCOL...]\nEstablishing secure proxy tunnel...\nBypassing mainframe firewall [SUCCESS]\n`;
+                terminal.innerHTML = baseText;
+
                 let progress = 0;
-                const baseText = terminal.innerHTML;
 
                 function updateProgress() {
                     if (progress < 100) {
-                        let step = Math.floor(Math.random() * 12) + 3; 
+                        // Рандомный шаг процентов
+                        let step = Math.floor(Math.random() * 14) + 2; 
                         progress += step;
 
                         if (progress > 100) progress = 100;
 
                         terminal.innerHTML = baseText + `\nInjecting payload: ${progress}%...`;
 
-                        let nextDelay = Math.floor(Math.random() * 500) + 150;
-                        if (progress > 35 && progress < 50) nextDelay += 500;
-                        if (progress > 75 && progress < 85) nextDelay += 700;
+                        // Рандомная задержка (эффект зависания)
+                        let nextDelay = Math.floor(Math.random() * 650) + 150;
+                        if (progress > 40 && progress < 55) nextDelay += 400;
+                        if (progress > 80 && progress < 88) nextDelay += 600;
 
                         setTimeout(updateProgress, nextDelay);
                     } else {
-                        // Финал! Всё скрываем, запускаем видео
-                        document.getElementById('matrixCanvas').style.display = 'none';
-                        termScreen.style.display = 'none';
-                        
-                        const videoContainer = document.getElementById('videoContainer');
-                        const video = document.getElementById('hackVideo');
-                        
+                        // 100% достигнуто! Скрываем текст и врубаем видео
+                        terminal.style.display = 'none';
                         videoContainer.style.display = 'block';
+                        
+                        // Запускаем видео и включаем звук
                         video.play();
                     }
                 }
 
-                setTimeout(updateProgress, 600);
+                updateProgress();
 
-            }, 1000);
-        }
-
-        // КОД ДЛЯ ЭФФЕКТА «МАТРИЦЫ»
-        function startMatrix() {
-            const canvas = document.getElementById('matrixCanvas');
-            const ctx = canvas.getContext('2d');
-
-            canvas.style.display = 'block';
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-
-            // Символы (катакана, цифры, латиница)
-            const matrixChars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿ".split("");
-            const fontSize = 16;
-            const columns = canvas.width / fontSize;
-
-            // Массив для хранения Y-координаты для каждой колонки
-            const rainDrops = [];
-            for (let x = 0; x < columns; x++) {
-                rainDrops[x] = 1;
-            }
-
-            function draw() {
-                // Полупрозрачный черный фон, чтобы оставался шлейф
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                ctx.fillStyle = '#00ff00';
-                ctx.font = fontSize + 'px monospace';
-
-                for (let i = 0; i < rainDrops.length; i++) {
-                    const text = matrixChars[Math.floor(Math.random() * matrixChars.length)];
-                    ctx.fillText(text, i * fontSize, rainDrops[i] * fontSize);
-
-                    // Сбрасываем каплю в начало экрана со случайным шансом
-                    if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) {
-                        rainDrops[i] = 0;
-                    }
-                    rainDrops[i]++;
-                }
-            }
-
-            // Перерисовывать каждые 30 миллисекунд
-            setInterval(draw, 30);
-
-            // Ресайз холста, если перевернули телефон
-            window.addEventListener('resize', () => {
-                canvas.width = window.innerWidth;
-                canvas.height = window.innerHeight;
-            });
+            }, 500);
         }
     </script>
 
